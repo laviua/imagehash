@@ -1,0 +1,83 @@
+import java.text.SimpleDateFormat
+
+Date buildTimeAndDate = new Date()
+ext {
+    buildDate = new SimpleDateFormat('yyyy-MM-dd').format(buildTimeAndDate)
+    buildTime = new SimpleDateFormat('HH:mm:ss.SSSZ').format(buildTimeAndDate)
+}
+
+def projectArtifactId = 'imagehash'
+
+normalization {
+    runtimeClasspath {
+        metaInf {
+            ignoreAttribute("Build-Time")
+            ignoreAttribute("Build-Date")
+        }
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'Built-By': 'Oleksandr Loushkin',
+                'Created-By': System.properties['java.version'] + " (" + System.properties['java.vendor'] + " " + System.properties['java.vm.version'] + ")",
+                'Build-Date': project.buildDate,
+                'Build-Time': project.buildTime,
+                'Specification-Title': projectArtifactId,
+                'Specification-Version': project.version,
+                'Implementation-Title': projectArtifactId,
+                'Implementation-Version': project.version,
+        )
+    }
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    archiveClassifier = 'sources'
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    archiveClassifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+signing {
+    useGpgCmd()
+    sign publishing.publications
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+            pom {
+                name = 'ImageHash'
+                description = 'Image hashing algorithms'
+                url = 'https://github.com/laviua/imagehash'
+
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'laviua'
+                        name = 'Oleksandr Loushkin'
+                        email = 'developer@lavi.com.ua'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:git://github.com:laviua/imagehash.git'
+                    developerConnection = 'scm:git:ssh://github.com:laviua/imagehash.git'
+                    url = 'https://github.com:laviua/imagehash.git'
+                }
+            }
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+
+}
