@@ -13,7 +13,7 @@ import javax.imageio.ImageIO
  * PerceptualHasher takes an input image, resizes it, converts it to a different color space, applies DCT, and generates a perceptual hash based on the top-left 8x8 matrix of DCT coefficients.
  * The resulting hash is returned as a hexadecimal string.
  */
-class PerceptualHasher: ImageHasher {
+class PerceptualImageHasher: ImageHasher {
 
     // requires for resize
     private val RESIZE_WIDTH = 32

@@ -5,14 +5,14 @@ import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import ua.com.lavi.imagehash.HashSearchResult
-import ua.com.lavi.imagehash.matcher.HammingMatcher
+import ua.com.lavi.imagehash.matcher.HammingImageMatcher
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 
 internal class PerceptualHasherTest {
 
-    private val imageHasher = PerceptualHasher()
-    private val imageMatcher = HammingMatcher()
+    private val imageHasher = PerceptualImageHasher()
+    private val imageMatcher = HammingImageMatcher()
 
     private val imageDataList = listOf(
         PerceptualHasherTest::class.java.getResource("/images/margot-robbie.jpg")!!.readBytes(),
