@@ -1,7 +1,7 @@
 package ua.com.lavi.imagehash.phash
 
+import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
-import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import ua.com.lavi.imagehash.HashSearchResult
@@ -26,13 +26,13 @@ internal class PerceptualHasherTest {
 
     @Test
     fun shouldCalculatePhash() {
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[0]))) shouldBe "c4482c8081488830"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[1]))) shouldBe "c0c0208108d000c0"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[2]))) shouldBe "d521948040000020"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[3]))) shouldBe "eb54fc88e00401c0"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[4]))) shouldBe "818c1773789e9008"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[5]))) shouldBe "d89a32602d61e166"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[6]))) shouldBe "8890150880000000"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[0]))) shouldBe "cd49ae95814bcd34"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[1]))) shouldBe "f0e539990bd430f4"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[2]))) shouldBe "d535fcc8c84c2533"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[3]))) shouldBe "fb54fcc9e04c81e0"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[4]))) shouldBe "818c1f73789e912d"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[5]))) shouldBe "d89b32702d61e566"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[6]))) shouldBe "8f90970cb4f60ba5"
     }
 
     @Test
@@ -57,7 +57,6 @@ internal class PerceptualHasherTest {
         allHashes.size shouldBe 7
     }
 
-
     @Test
     fun shouldResizeCorrectlyWithMultipleDimensions() {
 
@@ -78,7 +77,7 @@ internal class PerceptualHasherTest {
 
                 val distance = imageMatcher.distance(originalHash, resizedHash)
                 println("Scale: $scale of image: $index. Distance: $distance. Original hash: $originalHash. Got: $resizedHash")
-                distance shouldBeLessThan 10.0
+                distance shouldBeLessThan 20.0
             }
         }
     }

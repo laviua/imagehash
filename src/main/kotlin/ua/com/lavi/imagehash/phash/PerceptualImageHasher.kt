@@ -2,57 +2,79 @@ package ua.com.lavi.imagehash.phash
 
 import ua.com.lavi.imagehash.ImageHasher
 import java.awt.Color
-import java.awt.color.ColorSpace
 import java.awt.image.BufferedImage
-import java.awt.image.ColorConvertOp
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import javax.imageio.ImageIO
+import kotlin.math.cos
+import kotlin.math.sqrt
 
-/**
- * PerceptualHasher takes an input image, resizes it, converts it to a different color space, applies DCT, and generates a perceptual hash based on the top-left 8x8 matrix of DCT coefficients.
- * The resulting hash is returned as a hexadecimal string.
- */
-class PerceptualImageHasher: ImageHasher {
-
-    // requires for resize
-    private val RESIZE_WIDTH = 32
-    private val RESIZE_HEIGHT = 32
-
-    override fun hash(bytes: ByteArray, width: Int, height: Int): String {
-        return hash(ByteArrayInputStream(bytes), width, height)
-    }
+class PerceptualImageHasher(private val hashSize: Int = 8,
+                            private val highfreqFactor: Int = 4) : ImageHasher {
 
     override fun hash(bytes: ByteArray): String {
-        return hash(bytes, RESIZE_WIDTH, RESIZE_HEIGHT)
-    }
-
-    override fun hash(inputStream: InputStream, width: Int, height: Int): String {
-        return hash(ImageIO.read(inputStream), width, height)
+        return hash(ByteArrayInputStream(bytes))
     }
 
     override fun hash(inputStream: InputStream): String {
-        return hash(inputStream, RESIZE_WIDTH, RESIZE_HEIGHT)
+        return hash(ImageIO.read(inputStream))
     }
 
     override fun hash(image: BufferedImage): String {
-        return hash(image, RESIZE_WIDTH, RESIZE_HEIGHT)
+
+        val resizedImage = lanczosResize(image, hashSize * highfreqFactor, hashSize * highfreqFactor)
+        val dctMatrix = applyDCT(resizedImage)
+        val dctLowFreq = getTopLeftMatrix(dctMatrix, hashSize, hashSize)
+        val median = getMedianValue(dctLowFreq)
+        val diffBits = buildDiffBits(dctLowFreq, median)
+
+        return ImageHash(diffBits).hexHash()
     }
 
-    override fun hash(image: BufferedImage, width: Int, height: Int): String {
+    override fun hash(uri: URI): String {
+        val response: HttpResponse<ByteArray> = HttpClient.newHttpClient().send(HttpRequest.newBuilder()
+            .uri(uri)
+            .build(), HttpResponse.BodyHandlers.ofByteArray())
 
-        val resizedImage = lanczosResize(image, width, height)
-        val ycbcrImage = convertToYCbCr(resizedImage)
-        val dctImage = applyDCT(ycbcrImage)
-        val dctTopLeft = getTopLeftMatrix(dctImage, 8, 8)
-        val averageValue = getAverageValue(dctTopLeft)
-        val binaryString = buildBinaryString(dctTopLeft, averageValue)
-        return binaryStringToHexString(binaryString)
+        ByteArrayInputStream(response.body()).use { inputStream ->
+            val image: BufferedImage = ImageIO.read(inputStream)
+            val hash = hash(image)
+            return hash
+        }
     }
 
-    private fun convertToYCbCr(image: BufferedImage): BufferedImage {
-        val op = ColorConvertOp(ColorSpace.getInstance(ColorSpace.CS_PYCC), null)
-        return op.filter(image, null)
+    override fun hash(uri: URI, client: HttpClient): String {
+        val response: HttpResponse<ByteArray> = client.send(HttpRequest.newBuilder()
+            .uri(uri)
+            .build(), HttpResponse.BodyHandlers.ofByteArray())
+
+        ByteArrayInputStream(response.body()).use { inputStream ->
+            val image: BufferedImage = ImageIO.read(inputStream)
+            val hash = hash(image)
+            return hash
+        }
+    }
+
+    private fun getMedianValue(matrix: Array<DoubleArray>): Double {
+        val values = matrix.flatMap { it.toList() }.toMutableList()
+        values.sort()
+        val mid = values.size / 2
+        return values[mid]
+    }
+
+    private fun buildDiffBits(matrix: Array<DoubleArray>, median: Double): BooleanArray {
+        val diffBits = BooleanArray(matrix.size * matrix[0].size)
+        var index = 0
+        for (row in matrix) {
+            for (value in row) {
+                diffBits[index++] = value > median
+            }
+        }
+        return diffBits
     }
 
     private fun applyDCT(image: BufferedImage): Array<DoubleArray> {
@@ -66,8 +88,8 @@ class PerceptualImageHasher: ImageHasher {
                 for (x in 0 until width) {
                     for (y in 0 until height) {
                         val pixelValue = Color(image.getRGB(x, y)).red
-                        val cosineTerm = Math.cos(((2 * x + 1) * u * Math.PI) / (2 * width)) *
-                                Math.cos(((2 * y + 1) * v * Math.PI) / (2 * height))
+                        val cosineTerm = cos(((2 * x + 1) * u * Math.PI) / (2 * width)) *
+                                cos(((2 * y + 1) * v * Math.PI) / (2 * height))
                         sum += pixelValue * cosineTerm
                     }
                 }
@@ -80,29 +102,11 @@ class PerceptualImageHasher: ImageHasher {
     }
 
     private fun getScaleFactor(index: Int, size: Int): Double {
-        return if (index == 0) Math.sqrt(1.0 / size) else Math.sqrt(2.0 / size)
+        return if (index == 0) sqrt(1.0 / size) else sqrt(2.0 / size)
     }
 
     private fun getTopLeftMatrix(matrix: Array<DoubleArray>, width: Int, height: Int): Array<DoubleArray> {
         return Array(width) { x -> DoubleArray(height) { y -> matrix[x][y] } }
-    }
-
-    private fun getAverageValue(matrix: Array<DoubleArray>): Double {
-        var sum = 0.0
-        for (row in matrix) {
-            for (value in row) {
-                sum += value
-            }
-        }
-        return sum / (matrix.size * matrix[0].size)
-    }
-
-    private fun buildBinaryString(matrix: Array<DoubleArray>, averageValue: Double): String {
-        return matrix.joinToString("") { row ->
-            row.joinToString("") { value ->
-                if (value >= averageValue) "1" else "0"
-            }
-        }
     }
 
     fun lanczosResize(image: BufferedImage, width: Int, height: Int, a: Int = 3): BufferedImage {
@@ -127,8 +131,8 @@ class PerceptualImageHasher: ImageHasher {
                 for (j in (-a + 1)..a) {
                     for (i in (-a + 1)..a) {
                         val lanczosVal = lanczos(i.toDouble(), a.toDouble()) * lanczos(j.toDouble(), a.toDouble())
-                        val sampleX = (Math.floor(srcX) + i).toInt().coerceIn(0, image.width - 1)
-                        val sampleY = (Math.floor(srcY) + j).toInt().coerceIn(0, image.height - 1)
+                        val sampleX = (kotlin.math.floor(srcX) + i).toInt().coerceIn(0, image.width - 1)
+                        val sampleY = (kotlin.math.floor(srcY) + j).toInt().coerceIn(0, image.height - 1)
                         val pixel = Color(image.getRGB(sampleX, sampleY))
 
                         red += lanczosVal * pixel.red
@@ -157,15 +161,37 @@ class PerceptualImageHasher: ImageHasher {
         return kotlin.math.sin(pix) * kotlin.math.sin(pix / a) / (pix * pix)
     }
 
-    private fun binaryStringToHexString(binaryString: String): String {
-        val hexString = StringBuilder()
-        var index = 0
-        while (index < binaryString.length) {
-            val currentChunk = binaryString.substring(index, index + 4)
-            val decimalValue = Integer.parseInt(currentChunk, 2)
-            hexString.append(Integer.toHexString(decimalValue))
-            index += 4
+}
+
+data class ImageHash(val diffBits: BooleanArray) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ImageHash
+
+        if (!diffBits.contentEquals(other.diffBits)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return diffBits.contentHashCode()
+    }
+
+    fun hexHash(): String {
+        val sb = StringBuilder()
+        var decimal = 0
+        for ((index, bit) in this.diffBits.withIndex()) {
+            decimal = (decimal shl 1) + if (bit) 1 else 0
+            if ((index + 1) % 4 == 0) {
+                sb.append(decimal.toString(16))
+                decimal = 0
+            }
         }
-        return hexString.toString()
+        if (decimal != 0) {
+            sb.append(decimal.toString(16))
+        }
+        return sb.toString()
     }
 }

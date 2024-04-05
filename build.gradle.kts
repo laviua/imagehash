@@ -10,7 +10,7 @@ dependencies {
     testImplementation("com.twelvemonkeys.imageio:imageio-webp:3.9.3")
     testImplementation("com.twelvemonkeys.imageio:imageio-jpeg:3.9.4")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.9.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
     testImplementation("io.kotest:kotest-assertions-core-jvm:5.5.5")
 }
 
@@ -25,7 +25,7 @@ compileJavaTask.configure {
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
 }
 
@@ -40,7 +40,8 @@ nexusPublishing {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 

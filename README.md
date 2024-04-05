@@ -5,7 +5,7 @@ This repository contains an image hash algorithms.
 Zero dependency library
 
 ## Requirements
-- Java 8 or later
+- Java 11 or later
 
 ## Features
 - Pure kotlin gives ultralight library size
@@ -110,6 +110,12 @@ Run the following command in the console:
 or
 ./gradlew clean build publishToSonatype
 ```
+
+### Sonatype publishing
+https://central.sonatype.org/pages/ossrh-guide.html
+1. open https://oss.sonatype.org/ and login with your credentials
+2. Go to the Staging Repositories and close the repository
+3. After that, release the repository
 
 ### Contributing
 To contribute to this project, simply fork the repository and submit a pull request with your changes.
