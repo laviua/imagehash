@@ -1,6 +1,7 @@
 package ua.com.lavi.imagehash.phash
 
 import ua.com.lavi.imagehash.ImageHasher
+import ua.com.lavi.imagehash.resizer.SimpleResizer
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
@@ -14,7 +15,8 @@ import kotlin.math.cos
 import kotlin.math.sqrt
 
 class PerceptualImageHasher(private val hashSize: Int = 8,
-                            private val highfreqFactor: Int = 4) : ImageHasher {
+                            private val highfreqFactor: Int = 4,
+                            private val resizer: SimpleResizer = SimpleResizer()) : ImageHasher {
 
     override fun hash(bytes: ByteArray): String {
         return hash(ByteArrayInputStream(bytes))
@@ -25,8 +27,7 @@ class PerceptualImageHasher(private val hashSize: Int = 8,
     }
 
     override fun hash(image: BufferedImage): String {
-
-        val resizedImage = lanczosResize(image, hashSize * highfreqFactor, hashSize * highfreqFactor)
+        val resizedImage = resizer.resize(image, hashSize * highfreqFactor, hashSize * highfreqFactor)
         val dctMatrix = applyDCT(resizedImage)
         val dctLowFreq = getTopLeftMatrix(dctMatrix, hashSize, hashSize)
         val median = getMedianValue(dctLowFreq)
@@ -107,58 +108,6 @@ class PerceptualImageHasher(private val hashSize: Int = 8,
 
     private fun getTopLeftMatrix(matrix: Array<DoubleArray>, width: Int, height: Int): Array<DoubleArray> {
         return Array(width) { x -> DoubleArray(height) { y -> matrix[x][y] } }
-    }
-
-    fun lanczosResize(image: BufferedImage, width: Int, height: Int, a: Int = 3): BufferedImage {
-        val resizedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-
-        val scaleX = image.width.toDouble() / width
-        val scaleY = image.height.toDouble() / height
-
-        val translateX = 0.5 * scaleX - 0.5
-        val translateY = 0.5 * scaleY - 0.5
-
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                val srcX = (x * scaleX + translateX).coerceIn(0.0, image.width - 1.0)
-                val srcY = (y * scaleY + translateY).coerceIn(0.0, image.height - 1.0)
-
-                var red = 0.0
-                var green = 0.0
-                var blue = 0.0
-                var weightSum = 0.0
-
-                for (j in (-a + 1)..a) {
-                    for (i in (-a + 1)..a) {
-                        val lanczosVal = lanczos(i.toDouble(), a.toDouble()) * lanczos(j.toDouble(), a.toDouble())
-                        val sampleX = (kotlin.math.floor(srcX) + i).toInt().coerceIn(0, image.width - 1)
-                        val sampleY = (kotlin.math.floor(srcY) + j).toInt().coerceIn(0, image.height - 1)
-                        val pixel = Color(image.getRGB(sampleX, sampleY))
-
-                        red += lanczosVal * pixel.red
-                        green += lanczosVal * pixel.green
-                        blue += lanczosVal * pixel.blue
-                        weightSum += lanczosVal
-                    }
-                }
-
-                val newRed = (red / weightSum).coerceIn(0.0, 255.0).toInt()
-                val newGreen = (green / weightSum).coerceIn(0.0, 255.0).toInt()
-                val newBlue = (blue / weightSum).coerceIn(0.0, 255.0).toInt()
-
-                val newColor = Color(newRed, newGreen, newBlue).rgb
-                resizedImage.setRGB(x, y, newColor)
-            }
-        }
-        return resizedImage
-    }
-
-    private fun lanczos(x: Double, a: Double): Double {
-        if (x == 0.0) return 1.0
-        if (kotlin.math.abs(x) >= a) return 0.0
-
-        val pix = Math.PI * x
-        return kotlin.math.sin(pix) * kotlin.math.sin(pix / a) / (pix * pix)
     }
 
 }

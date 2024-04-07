@@ -1,11 +1,12 @@
 package ua.com.lavi.imagehash.phash
 
-import io.kotest.matchers.comparables.shouldBeLessThan
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.doubles.shouldBeLessThanOrEqual
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import ua.com.lavi.imagehash.HashSearchResult
 import ua.com.lavi.imagehash.matcher.HammingImageMatcher
+import ua.com.lavi.imagehash.resizer.SimpleResizer
 import java.io.ByteArrayInputStream
 import javax.imageio.ImageIO
 
@@ -13,6 +14,8 @@ internal class PerceptualHasherTest {
 
     private val imageHasher = PerceptualImageHasher()
     private val imageMatcher = HammingImageMatcher()
+
+    private val resizer = SimpleResizer()
 
     private val imageDataList = listOf(
         PerceptualHasherTest::class.java.getResource("/images/margot-robbie.jpg")!!.readBytes(),
@@ -26,13 +29,13 @@ internal class PerceptualHasherTest {
 
     @Test
     fun shouldCalculatePhash() {
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[0]))) shouldBe "cd49ae95814bcd34"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[1]))) shouldBe "f0e539990bd430f4"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[2]))) shouldBe "d535fcc8c84c2533"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[0]))) shouldBe "cd49ae85814bcd74"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[1]))) shouldBe "f1c439bb0ed818d8"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[2]))) shouldBe "d527fcd8c04ca531"
         imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[3]))) shouldBe "fb54fcc9e04c81e0"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[4]))) shouldBe "818c1f73789e912d"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[5]))) shouldBe "d89b32702d61e566"
-        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[6]))) shouldBe "8f90970cb4f60ba5"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[4]))) shouldBe "81ad1f73789c3138"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[5]))) shouldBe "d89a32612d65e566"
+        imageHasher.hash(ImageIO.read(ByteArrayInputStream(imageDataList[6]))) shouldBe "8f90970eb4b60ba5"
     }
 
     @Test
@@ -72,12 +75,12 @@ internal class PerceptualHasherTest {
                 val newWidth = (originalImage.width * scale).toInt()
                 val newHeight = (originalImage.height * scale).toInt()
 
-                val resizedImage = imageHasher.lanczosResize(originalImage, newWidth, newHeight)
+                val resizedImage = resizer.resize(originalImage, newWidth, newHeight)
                 val resizedHash = imageHasher.hash(resizedImage)
 
                 val distance = imageMatcher.distance(originalHash, resizedHash)
                 println("Scale: $scale of image: $index. Distance: $distance. Original hash: $originalHash. Got: $resizedHash")
-                distance shouldBeLessThan 20.0
+                distance shouldBeLessThanOrEqual 3.0
             }
         }
     }
@@ -95,7 +98,7 @@ internal class PerceptualHasherTest {
         val newWidth = (originalImage.width * 0.5).toInt()
         val newHeight = (originalImage.height * 0.5).toInt()
 
-        val resizedHash = imageHasher.hash(imageHasher.lanczosResize(originalImage, newWidth, newHeight))
+        val resizedHash = imageHasher.hash(resizer.resize(originalImage, newWidth, newHeight))
 
         val result: List<HashSearchResult> = imageMatcher.findTopXMostSimilar(targetHash = resizedHash, hashes = hashes, topX = 5)
         result.first().index shouldBe index

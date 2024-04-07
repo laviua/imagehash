@@ -30,10 +30,10 @@ Zero dependency library
 Using plugins is optional, but recommended.
 
 ```
-val hash1 = Phash.averageHash(ImageIO.read(ByteArrayInputStream(imagebytes)))
-val hash2 = Phash.averageHash(ImageIO.read(ByteArrayInputStream(imagebytes2)))
+val hash1 = PerceptualImageHasher.hash(ImageIO.read(ByteArrayInputStream(imagebytes)))
+val hash2 = PerceptualImageHasher.hash(ImageIO.read(ByteArrayInputStream(imagebytes2)))
 
-val distance = PhashMatcher.hammingDistance(hash1, hash2)
+val distance = HammingImageMatcher.distance(hash1, hash2)
 ```
 Less value - is more similar
 
